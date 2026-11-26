@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int                @id @default(autoincrement())
+  name                 String
+  email                String
+  phone                String             @unique
+  role                 String             @default("USER")
+  createdAt            DateTime           @default(now())
+  lastViolationDate    DateTime?
+  aadhaarNumber        String?            @unique
+  drivingLicenseNumber String?            @unique
+  trustedBy            EmergencyContact[] @relation("ContactEmergencyContacts")
+  emergencyContacts    EmergencyContact[] @relation("UserEmergencyContacts")
+  trustScore           TrustScore?
+  vehicles             Vehicle[]
+}
+
+model Message {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  vehicleNumber String?
+  type          String?
+  content       String
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model Vehicle {
+  id            Int            @id @default(autoincrement())
+  numberPlate   String         @unique
+  brand         String
+  model         String
+  year          String
+  likes         String
+  dislikes      String
+  qrCode        String
+  userId        Int
+  status        VehicleStatus  @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  towRecords    TowRecord[]
+  user          User           @relation(fields: [userId], references: [id])
+  vehicleEvents VehicleEvent[]
+}
+
+model Officer {
+  id              Int         @id @default(autoincrement())
+  name            String
+  designation     String
+  policeStation   String
+  location        String
+  officerId       String      @unique
+  password        String
+  createdAt       DateTime    @default(now())
+  reputationScore Int         @default(100)
+  towRecords      TowRecord[]
+}
+
+model Fine {
+  id            Int      @id @default(autoincrement())
+  vehicleNumber String
+  reason        String
+  amount        Int
+  tollLocation  String
+  evidencePhoto String?
+  latitude      Float?
+  longitude     Float?
+  officerName   String
+  officerId     Int
+  userId        Int?
+  isPaid        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  driverType    String   @default("OWNER")
+  driverUserId  Int?
+}
+
+model VehicleOwnership {
+  id            Int      @id @default(autoincrement())
+  vehicleNumber String
+  oldUserId     Int
+  newUserId     Int
+  transferredAt DateTime @default(now())
+}
+
+model VehicleEvent {
+  id            Int      @id @default(autoincrement())
+  vehicleId     Int?
+  vehicleNumber String?
+  type          String
+  title         String
+  description   String
+  createdAt     DateTime @default(now())
+  vehicle       Vehicle? @relation(fields: [vehicleId], references: [id])
+}
+
+model VehicleOwnershipHistory {
+  id            Int      @id @default(autoincrement())
+  vehicleNumber String
+  oldUserId     Int
+  newUserId     Int
+  transferredAt DateTime @default(now())
+}
+
+model TowRecord {
+  id             Int       @id @default(autoincrement())
+  vehicleId      Int
+  officerId      Int
+  reason         String
+  pickupLocation String
+  impoundYard    String
+  isReleased     Boolean   @default(false)
+  releasedAt     DateTime?
+  releasedBy     Int?
+  vehiclePhoto   String?
+  latitude       Float?
+  longitude      Float?
+  notes          String?
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now())
+  officer        Officer   @relation(fields: [officerId], references: [id])
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id])
+}
+
+model EmergencyContact {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  contactUserId Int
+  relation      String
+  createdAt     DateTime @default(now())
+  contactUser   User     @relation("ContactEmergencyContacts", fields: [contactUserId], references: [id])
+  user          User     @relation("UserEmergencyContacts", fields: [userId], references: [id])
+}
+
+model TrustScoreEvent {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  vehicleId Int?
+  eventType String
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model TrustScore {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  score     Int      @default(100)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ContactOwnerMessage {
+  id            Int      @id @default(autoincrement())
+  senderId      Int
+  receiverId    Int
+  vehicleNumber String
+  message       String
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+enum VehicleStatus {
+  ACTIVE
+  TOWED
+  TRANSFER_PENDING
+  BLOCKED
+}
